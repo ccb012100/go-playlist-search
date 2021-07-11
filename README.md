@@ -1,2 +1,2 @@
 # go-playlist-search
-Searching Sqlite DB containing Spotify playlist data
+Terminal GUI written in Golang - for searching a Sqlite DB containing Spotify playlist data

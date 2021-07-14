@@ -21,6 +21,8 @@ const (
 type View struct {
 	// main application
 	app *tview.Application
+	// Grid at Application Root
+	grid *tview.Grid
 	// pages shown with the application
 	pages *tview.Pages
 	// panel at bottom of app for displaying messages
@@ -30,31 +32,53 @@ type View struct {
 }
 
 func main() {
-	conf := setConfig()
+	conf := SetConfig()
 
 	// create main View
 	view := &View{
 		db:         conf.DBFilePath,
 		app:        tview.NewApplication().EnableMouse(true),
+		grid:       tview.NewGrid(),
 		pages:      tview.NewPages(),
 		messageBar: tview.NewTextView(),
 	}
 
-	CreateHomePage(view)
-	CreatePlaylistsPage(view)
-	CreateAlbumsPage(view)
-	CreateAlbumsPage(view)
-	CreateSongsPage(view)
+	CreateRootGrid(view)
+	CreatePages(view)
 
-	// TODO: create Grid: Pages in Top Row, MessageBar in bottom row for displaying log messages
-
-	if err := view.app.SetRoot(view.pages, true).SetFocus(view.pages).Run(); err != nil {
+	if err := view.app.SetRoot(view.grid, true).SetFocus(view.grid).Run(); err != nil {
 		panic(err)
 	}
 }
 
+func CreatePages(v *View) {
+	CreateHomePage(v)
+	CreatePlaylistsPage(v)
+	CreateAlbumsPage(v)
+	CreateAlbumsPage(v)
+	CreateSongsPage(v)
+}
+
+func CreateRootGrid(v *View) {
+	// 3 rows
+	// row 1: Header
+	// row 2: main content
+	// row 3: Footer
+	header := tview.NewTextView().SetTextAlign(tview.AlignCenter).SetText("Header")
+	footer := tview.NewTextView().SetTextAlign(tview.AlignCenter).SetText("Footer")
+
+	v.grid.SetRows(3, 0, 5).SetColumns(0).SetBorders(true).
+		// row 0
+		AddItem(header, 0, 0, 1, 1, 0, 0, false).
+		// row 1
+		AddItem(v.pages, 1, 0, 1, 1, 0, 0, true).
+		// row 2
+		AddItem(footer, 2, 0, 1, 1, 0, 0, false)
+
+}
+
 // Read configuration file and map it to a Config struct
-func setConfig() config.Config {
+func SetConfig() config.Config {
 	viper.New()
 	viper.SetConfigFile("./app.env")
 
@@ -73,7 +97,7 @@ func setConfig() config.Config {
 
 // convert ints into alphabetic characters,
 // i.e. 1->a, 2->b, 3->c, etc.
-func intToAlpha(i int) rune {
+func IntToAlpha(i int) rune {
 	return rune('a' - 1 + i)
 }
 
@@ -106,7 +130,7 @@ func CreatePlaylistsPage(v *View) {
 		var name string
 
 		rows.Scan(&id, &name)
-		list.AddItem(name, id, intToAlpha(i), func() { SelectPlaylist(v, id, name) })
+		list.AddItem(name, id, IntToAlpha(i), func() { SelectPlaylist(v, id, name) })
 		i++
 	}
 	AddQuitOption(list, func() { v.pages.SwitchToPage(HomePage) })

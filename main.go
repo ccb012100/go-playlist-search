@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	AlbumsPage    = "albums-page"
-	ArtistsPage   = "artists-page"
-	HomePage      = "home-page"
-	PlaylistsPage = "playlists-page"
-	SongsPage     = "songs-page"
+	ALBUMS_PAGE    = "ALBUMS_PAGE"
+	ARTISTS_PAGE   = "ARTISTS_PAGE"
+	HOME_PAGE      = "HOME_PAGE"
+	PLAYLISTS_PAGE = "PLAYLISTS_PAGE"
+	SONGS_PAGE     = "SONGS_PAGE"
 )
 
 type View struct {
@@ -34,6 +34,20 @@ type View struct {
 	db string
 }
 
+type Album struct {
+	id          string
+	name        string
+	totalTracks int
+	releaseDate string
+	albumType   string
+}
+
+type Identifier struct {
+	name string
+	id   string
+}
+
+// TODO: add key shortcuts to switch focus between grid sections
 func main() {
 	conf := SetConfig()
 
@@ -66,7 +80,7 @@ func CreatePages(v *View) {
 	CreateMessageBar(v)
 	CreateHomePage(v)
 	CreatePlaylistsPage(v)
-	CreateAlbumsPage(v)
+	CreateArtistsPage(v)
 	CreateAlbumsPage(v)
 	CreateSongsPage(v)
 }
@@ -127,16 +141,16 @@ func AddResetOption(list *tview.List, f func()) {
 
 func CreateHomePage(v *View) {
 	list := tview.NewList().
-		AddItem("Playlists", "View Playlists", '1', func() { v.pages.SwitchToPage(PlaylistsPage) }).
-		AddItem("Artists", "View Artists", '2', func() { v.pages.SwitchToPage(ArtistsPage) }).
-		AddItem("Albums", "View Albums", '3', func() { v.pages.SwitchToPage(AlbumsPage) }).
-		AddItem("Songs", "View Songs", '4', func() { v.pages.SwitchToPage(SongsPage) })
+		AddItem("Playlists", "View Playlists", '1', func() { v.pages.SwitchToPage(PLAYLISTS_PAGE) }).
+		AddItem("Artists", "View Artists", '2', func() { v.pages.SwitchToPage(ARTISTS_PAGE) }).
+		AddItem("Albums", "View Albums", '3', func() { v.pages.SwitchToPage(ALBUMS_PAGE) }).
+		AddItem("Songs", "View Songs", '4', func() { v.pages.SwitchToPage(SONGS_PAGE) })
 
 	AddQuitOption(list, func() { v.app.Stop() })
 
 	list.SetTitle("Home")
 
-	v.pages.AddPage(HomePage, list, true, true)
+	v.pages.AddPage(HOME_PAGE, list, true, true)
 }
 
 func CreatePlaylistsPage(v *View) {
@@ -146,7 +160,7 @@ func CreatePlaylistsPage(v *View) {
 		v.UpdateMessageBar(fmt.Sprintf("key = %v", key))
 		switch key {
 		case tcell.KeyEscape:
-			v.pages.ShowPage(HomePage)
+			v.pages.ShowPage(HOME_PAGE)
 			v.app.SetFocus(v.pages)
 		case tcell.KeyEnter:
 			ShowPlaylists(v, input.GetText())
@@ -159,15 +173,15 @@ func CreatePlaylistsPage(v *View) {
 	grid.SetTitle("PLaylists")
 	grid.AddItem(input, 0, 0, 1, 1, 0, 0, true)
 
-	v.pages.AddPage(PlaylistsPage, grid, true, false)
+	v.pages.AddPage(PLAYLISTS_PAGE, grid, true, false)
 }
 
 func ShowPlaylists(v *View, query string) {
-	v.UpdateMessageBar("show playlists")
+	v.UpdateMessageBar(fmt.Sprintf("func ShowPlaylists() query='%s'", query))
 	pageName, item := v.pages.GetFrontPage()
 
-	if pageName != PlaylistsPage {
-		panic("This method should only be called from the Playlists page")
+	if pageName != PLAYLISTS_PAGE {
+		panic(fmt.Sprintf("This method should only be called from %s, but was called from %s", PLAYLISTS_PAGE, pageName))
 	}
 
 	grid, ok := item.(*tview.Grid)
@@ -190,16 +204,19 @@ func ShowPlaylists(v *View, query string) {
 		var id string
 		var name string
 
-		rows.Scan(&id, &name)
+		if err := rows.Scan(&id, &name); err != nil {
+			panic(err)
+		}
+
 		list.AddItem(name, id, 0, func() { SelectPlaylist(v, id, name) })
 		i++
 	}
 
-	AddQuitOption(list, func() { v.pages.SwitchToPage(HomePage) })
+	AddQuitOption(list, func() { v.pages.SwitchToPage(HOME_PAGE) })
 
 	AddResetOption(list, func() {
 		CreatePlaylistsPage(v)
-		v.pages.ShowPage(PlaylistsPage)
+		v.pages.ShowPage(PLAYLISTS_PAGE)
 		v.app.SetFocus(v.pages)
 	})
 
@@ -212,10 +229,9 @@ func ShowPlaylists(v *View, query string) {
 }
 
 func SelectPlaylist(v *View, id string, name string) {
-	v.UpdateMessageBar(fmt.Sprintf("Selected playlist %s %s", id, name))
 	pageName, item := v.pages.GetFrontPage()
 
-	if pageName != PlaylistsPage {
+	if pageName != PLAYLISTS_PAGE {
 		panic("This method should only be called from the Playlists page")
 	}
 
@@ -233,22 +249,123 @@ func SelectPlaylist(v *View, id string, name string) {
 }
 
 func CreateArtistsPage(v *View) {
-	box := tview.NewBox().SetBorder(true).SetTitle("Artists")
-	v.pages.AddPage(ArtistsPage, box, true, false)
+	input := tview.NewInputField()
+
+	input.SetLabel("Search for artists: ").SetFieldWidth(50).SetDoneFunc(func(key tcell.Key) {
+		v.UpdateMessageBar(fmt.Sprintf("key = %v", key))
+		switch key {
+		case tcell.KeyEscape:
+			v.pages.ShowPage(HOME_PAGE)
+			v.app.SetFocus(v.pages)
+		case tcell.KeyEnter:
+			ShowArtists(v, input.GetText())
+		}
+	})
+
+	// Row 1 = selection list
+	// Row 2 = selected playlist details
+	grid := tview.NewGrid().SetRows(0, 0).SetBorders(true)
+	grid.SetTitle("Artists")
+	grid.AddItem(input, 0, 0, 1, 1, 0, 0, true)
+
+	v.pages.AddPage(ARTISTS_PAGE, grid, true, false)
+}
+
+func ShowArtists(v *View, query string) {
+	v.UpdateMessageBar(fmt.Sprintf("func ShowArtists() query='%s'", query))
+	pageName, item := v.pages.GetFrontPage()
+
+	if pageName != ARTISTS_PAGE {
+		panic("This method should only be called from the Playlists page")
+	}
+
+	grid, ok := item.(*tview.Grid)
+	if !ok {
+		panic(fmt.Sprintf("Expected type *tview.Grid but got %T", grid))
+	}
+
+	list := tview.NewList()
+	database, _ := sql.Open("sqlite3", v.db)
+
+	rows, err := database.Query(
+		"SELECT id, name FROM Artist WHERE name LIKE '%' || @Query || '%' ORDER BY name",
+		sql.Named("Query", query))
+
+	if err != nil {
+		panic(err)
+	}
+
+	for rows.Next() {
+		var id string
+		var name string
+
+		rows.Scan(&id, &name)
+		list.AddItem(name, id, 0, func() { SelectArtist(v, id, name) })
+	}
+
+	AddQuitOption(list, func() { v.pages.SwitchToPage(HOME_PAGE) })
+
+	AddResetOption(list, func() {
+		CreateArtistsPage(v)
+		v.pages.ShowPage(ARTISTS_PAGE)
+		v.app.SetFocus(v.pages)
+	})
+
+	list.SetTitle("Artists results")
+
+	// Row 1 = selection list
+	// Row 2 = selected playlist details
+	grid.Clear().AddItem(list, 0, 0, 1, 1, 0, 0, true)
+	v.app.SetFocus(grid)
 }
 
 func CreateSongsPage(v *View) {
 	box := tview.NewBox().SetBorder(true).SetTitle("Songs")
-	v.pages.AddPage(SongsPage, box, true, false)
+	v.pages.AddPage(SONGS_PAGE, box, true, false)
 }
 
 func CreateAlbumsPage(v *View) {
 	box := tview.NewBox().SetBorder(true).SetTitle("Albums")
-	v.pages.AddPage(SongsPage, box, true, false)
+	v.pages.AddPage(SONGS_PAGE, box, true, false)
 }
 
-func SelectArtist(v *View, id string, name string) {
+func SelectArtist(v *View, artistId string, name string) {
+	v.UpdateMessageBar(fmt.Sprintf("Selected artist %s %s", artistId, name))
+	pageName, item := v.pages.GetFrontPage()
 
+	if pageName != ARTISTS_PAGE {
+		panic(fmt.Sprintf("This method should only be called from %s, but was called from %s", ARTISTS_PAGE, pageName))
+	}
+
+	grid, ok := item.(*tview.Grid)
+	if !ok {
+		panic(fmt.Sprintf("Expected type *tview.Grid but got %T", grid))
+	}
+
+	database, _ := sql.Open("sqlite3", v.db)
+	rows, err := database.Query(
+		"select id, name, total_tracks, release_date, album_type from Album a join AlbumArtist AA on a.id = AA.album_id where AA.artist_id = @Id",
+		sql.Named("Id", artistId))
+
+	if err != nil {
+		panic(err)
+	}
+
+	list := tview.NewList() // TODO: use a table instead of a list
+
+	for rows.Next() {
+		// TODO: map each row to an Album struct and store in an array
+		var id, name, totalTracks, releaseDate, albumType string
+
+		if err := rows.Scan(&id, &name, &totalTracks, &releaseDate, &albumType); err != nil {
+			panic(err)
+		}
+
+		list.AddItem(name, fmt.Sprintf("%s tracks; %s; album type: %s", totalTracks, releaseDate, albumType), 0, nil)
+	}
+
+	grid.AddItem(list, 1, 0, 1, 1, 0, 0, true)
+	v.app.SetFocus(list)
 }
 
 func SelectSong(v *View, id string, name string) {

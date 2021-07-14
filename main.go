@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ccb012100/go-playlist-search/config"
+	"github.com/gdamore/tcell/v2"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rivo/tview"
 	"github.com/spf13/viper"
@@ -25,8 +26,10 @@ type View struct {
 	grid *tview.Grid
 	// pages shown with the application
 	pages *tview.Pages
-	// panel at bottom of app for displaying messages
+	// footer for displaying messages
 	messageBar *tview.TextView
+	// header for menu options
+	menuBar *tview.TextView
 	// db file path
 	db string
 }
@@ -41,17 +44,26 @@ func main() {
 		grid:       tview.NewGrid(),
 		pages:      tview.NewPages(),
 		messageBar: tview.NewTextView(),
+		menuBar:    tview.NewTextView(),
 	}
 
 	CreateRootGrid(view)
 	CreatePages(view)
+
+	view.UpdateMessageBar("Application created!")
 
 	if err := view.app.SetRoot(view.grid, true).SetFocus(view.grid).Run(); err != nil {
 		panic(err)
 	}
 }
 
+func (v *View) UpdateMessageBar(message string) {
+	v.messageBar.Clear().SetText(message)
+}
+
 func CreatePages(v *View) {
+	CreateMenuBar(v)
+	CreateMessageBar(v)
 	CreateHomePage(v)
 	CreatePlaylistsPage(v)
 	CreateAlbumsPage(v)
@@ -59,22 +71,26 @@ func CreatePages(v *View) {
 	CreateSongsPage(v)
 }
 
+func CreateMessageBar(v *View) {
+	v.messageBar.SetTextAlign(tview.AlignCenter).SetText("Message Bar")
+}
+
+func CreateMenuBar(v *View) {
+	v.menuBar.SetTextAlign(tview.AlignCenter).SetText("Menu Bar")
+}
+
 func CreateRootGrid(v *View) {
 	// 3 rows
-	// row 1: Header
+	// row 1: Menu Bar
 	// row 2: main content
-	// row 3: Footer
-	header := tview.NewTextView().SetTextAlign(tview.AlignCenter).SetText("Header")
-	footer := tview.NewTextView().SetTextAlign(tview.AlignCenter).SetText("Footer")
-
+	// row 3: Message Bar
 	v.grid.SetRows(3, 0, 5).SetColumns(0).SetBorders(true).
 		// row 0
-		AddItem(header, 0, 0, 1, 1, 0, 0, false).
+		AddItem(v.menuBar, 0, 0, 1, 1, 0, 0, false).
 		// row 1
 		AddItem(v.pages, 1, 0, 1, 1, 0, 0, true).
 		// row 2
-		AddItem(footer, 2, 0, 1, 1, 0, 0, false)
-
+		AddItem(v.messageBar, 2, 0, 1, 1, 0, 0, false)
 }
 
 // Read configuration file and map it to a Config struct
@@ -102,7 +118,11 @@ func IntToAlpha(i int) rune {
 }
 
 func AddQuitOption(list *tview.List, f func()) {
-	list.AddItem("Quit", "[red]Press [::b]q[::-] to exit[-]", 'q', f)
+	list.AddItem("[red::b]Quit[-]", "[red::]Press q to exit[-]", 'q', f)
+}
+
+func AddResetOption(list *tview.List, f func()) {
+	list.AddItem("[yellow::b]Reset[-]", "[yellow::]Press r to reset this page[-]", 'r', f)
 }
 
 func CreateHomePage(v *View) {
@@ -120,9 +140,50 @@ func CreateHomePage(v *View) {
 }
 
 func CreatePlaylistsPage(v *View) {
+	input := tview.NewInputField()
+
+	input.SetLabel("Search for a playlist: ").SetFieldWidth(50).SetDoneFunc(func(key tcell.Key) {
+		v.UpdateMessageBar(fmt.Sprintf("key = %v", key))
+		switch key {
+		case tcell.KeyEscape:
+			v.pages.ShowPage(HomePage)
+			v.app.SetFocus(v.pages)
+		case tcell.KeyEnter:
+			ShowPlaylists(v, input.GetText())
+		}
+	})
+
+	// Row 1 = selection list
+	// Row 2 = selected playlist details
+	grid := tview.NewGrid().SetRows(0, 0).SetBorders(true)
+	grid.SetTitle("PLaylists")
+	grid.AddItem(input, 0, 0, 1, 1, 0, 0, true)
+
+	v.pages.AddPage(PlaylistsPage, grid, true, false)
+}
+
+func ShowPlaylists(v *View, query string) {
+	v.UpdateMessageBar("show playlists")
+	pageName, item := v.pages.GetFrontPage()
+
+	if pageName != PlaylistsPage {
+		panic("This method should only be called from the Playlists page")
+	}
+
+	grid, ok := item.(*tview.Grid)
+	if !ok {
+		panic(fmt.Sprintf("Expected type *tview.Grid but got %T", grid))
+	}
+
 	list := tview.NewList()
 	database, _ := sql.Open("sqlite3", v.db)
-	rows, _ := database.Query("SELECT id, name FROM Playlist LIMIT 10")
+	rows, err := database.Query(
+		"SELECT id, name FROM Playlist WHERE name LIKE '%' || @Query || '%' ORDER BY name",
+		sql.Named("Query", query))
+
+	if err != nil {
+		panic(err)
+	}
 
 	var i = 1
 	for rows.Next() {
@@ -130,22 +191,28 @@ func CreatePlaylistsPage(v *View) {
 		var name string
 
 		rows.Scan(&id, &name)
-		list.AddItem(name, id, IntToAlpha(i), func() { SelectPlaylist(v, id, name) })
+		list.AddItem(name, id, 0, func() { SelectPlaylist(v, id, name) })
 		i++
 	}
+
 	AddQuitOption(list, func() { v.pages.SwitchToPage(HomePage) })
+
+	AddResetOption(list, func() {
+		CreatePlaylistsPage(v)
+		v.pages.ShowPage(PlaylistsPage)
+		v.app.SetFocus(v.pages)
+	})
 
 	list.SetTitle("Playlists")
 
 	// Row 1 = selection list
 	// Row 2 = selected playlist details
-	grid := tview.NewGrid().SetRows(0, 0).SetBorders(true)
-	grid.AddItem(list, 0, 0, 1, 1, 0, 0, true)
-
-	v.pages.AddPage(PlaylistsPage, grid, true, false)
+	grid.Clear().AddItem(list, 0, 0, 1, 1, 0, 0, true)
+	v.app.SetFocus(grid)
 }
 
 func SelectPlaylist(v *View, id string, name string) {
+	v.UpdateMessageBar(fmt.Sprintf("Selected playlist %s %s", id, name))
 	pageName, item := v.pages.GetFrontPage()
 
 	if pageName != PlaylistsPage {

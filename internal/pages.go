@@ -299,9 +299,9 @@ func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
 	if !ok {
 		panic(fmt.Sprintf("Expected type *tview.Grid but got %T", grid))
 	}
-
 	database, _ := sql.Open("sqlite3", v.DB)
 	sqlRows, err := database.Query(
+		// TODO: modify the query to also include albums from the tracks that the artist appears on
 		"select id, name, total_tracks, release_date, album_type from Album a join AlbumArtist AA on a.id = AA.album_id where AA.artist_id = @Id",
 		sql.Named("Id", artist.Id))
 

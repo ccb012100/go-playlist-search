@@ -1,18 +1,15 @@
 package models
 
-import "github.com/rivo/tview"
+import (
+	"github.com/mum4k/termdash/container"
+	"github.com/mum4k/termdash/widgets/text"
+)
 
-type View struct {
-	// main application
-	App *tview.Application
-	// Grid at Application Root
-	Grid *tview.Grid
-	// pages shown with the application
-	Pages *tview.Pages
-	// footer for displaying messages
-	MessageBar *tview.TextView
-	// header for menu options
-	MenuBar *tview.TextView
+type App struct {
+	// root container
+	Root *container.Container
+	// widget for displaying messages
+	MessagePanel *text.Text
 	// db file path
 	DB string
 }
@@ -28,8 +25,4 @@ type Album struct {
 type SimpleIdentifier struct {
 	Name string
 	Id   string
-}
-
-func (v View) UpdateMessageBar(message string) {
-	v.MessageBar.Clear().SetText(message)
 }

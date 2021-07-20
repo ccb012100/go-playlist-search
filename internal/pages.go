@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/ccb012100/go-playlist-search/config"
 	"github.com/ccb012100/go-playlist-search/internal/models"
+
 	"github.com/gdamore/tcell/v2"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rivo/tview"
@@ -30,6 +30,13 @@ func CreatePages(v *models.View) {
 	CreateArtistsPage(v)
 	CreateAlbumsPage(v)
 	CreateSongsPage(v)
+}
+
+func AddQuitToHomeOption(list *tview.List, v *models.View) {
+	AddQuitOption(list, func() {
+		v.Pages.SwitchToPage(HOME_PAGE)
+		v.App.SetFocus(v.Pages)
+	})
 }
 
 func CreateMessageBar(v *models.View) {
@@ -110,26 +117,15 @@ func CreatePlaylistsPage(v *models.View) {
 		}
 	})
 
-	// Row 1 = selection list
-	// Row 2 = selected playlist details
-	grid := tview.NewGrid().SetRows(0, 0).SetBorders(true)
-	grid.SetTitle("PLaylists")
-	grid.AddItem(input, 0, 0, 1, 1, 0, 0, true)
-
-	v.Pages.AddPage(PLAYLISTS_PAGE, grid, true, false)
+	v.Pages.AddPage(PLAYLISTS_PAGE, input, true, false)
 }
 
 func ShowPlaylists(v *models.View, query string) {
 	v.UpdateMessageBar(fmt.Sprintf("func ShowPlaylists() query='%s'", query))
-	pageName, item := v.Pages.GetFrontPage()
+	pageName, _ := v.Pages.GetFrontPage()
 
 	if pageName != PLAYLISTS_PAGE {
 		panic(fmt.Sprintf("This method should only be called from %s, but was called from %s", PLAYLISTS_PAGE, pageName))
-	}
-
-	grid, ok := item.(*tview.Grid)
-	if !ok {
-		panic(fmt.Sprintf("Expected type *tview.Grid but got %T", grid))
 	}
 
 	database, _ := sql.Open("sqlite3", v.DB)
@@ -159,7 +155,7 @@ func ShowPlaylists(v *models.View, query string) {
 		list.AddItem(plist.Name, plist.Id, 0, func() { SelectPlaylist(v, plist) })
 	}
 
-	AddQuitOption(list, func() { v.Pages.SwitchToPage(HOME_PAGE) })
+	AddQuitToHomeOption(list, v)
 
 	AddResetOption(list, func() {
 		CreatePlaylistsPage(v)
@@ -171,20 +167,15 @@ func ShowPlaylists(v *models.View, query string) {
 
 	// Row 1 = selection list
 	// Row 2 = selected playlist details
-	grid.Clear().AddItem(list, 0, 0, 1, 1, 0, 0, true)
-	v.App.SetFocus(grid)
+	v.Grid.AddItem(list, 1, 0, 1, 1, 0, 0, true)
+	v.App.SetFocus(list)
 }
 
 func SelectPlaylist(v *models.View, playlist models.SimpleIdentifier) {
-	pageName, item := v.Pages.GetFrontPage()
+	pageName, _ := v.Pages.GetFrontPage()
 
 	if pageName != PLAYLISTS_PAGE {
 		panic("This method should only be called from the Playlists page")
-	}
-
-	grid, ok := item.(*tview.Grid)
-	if !ok {
-		panic(fmt.Sprintf("Expected type *tview.Grid but got %T", grid))
 	}
 
 	var textView = tview.NewTextView()
@@ -192,7 +183,7 @@ func SelectPlaylist(v *models.View, playlist models.SimpleIdentifier) {
 	textView.SetText(fmt.Sprintf("Selected playlist id='%s', name='%s'", playlist.Id, playlist.Name)).
 		SetTitle(fmt.Sprintf("Selected Playlist: %s", playlist.Name))
 
-	grid.AddItem(textView, 1, 0, 1, 1, 0, 0, false)
+	v.Grid.AddItem(textView, 1, 0, 1, 1, 0, 0, false)
 }
 
 func CreateArtistsPage(v *models.View) {
@@ -209,26 +200,15 @@ func CreateArtistsPage(v *models.View) {
 		}
 	})
 
-	// Row 1 = selection list
-	// Row 2 = selected playlist details
-	grid := tview.NewGrid().SetRows(20, 30).SetBorders(true)
-	grid.SetTitle("Artists")
-	grid.AddItem(input, 0, 0, 1, 1, 0, 0, true)
-
-	v.Pages.AddPage(ARTISTS_PAGE, grid, true, false)
+	v.Pages.AddPage(ARTISTS_PAGE, input, true, false)
 }
 
 func ShowArtists(v *models.View, query string) {
 	v.UpdateMessageBar(fmt.Sprintf("func ShowArtists() query='%s'", query))
-	pageName, item := v.Pages.GetFrontPage()
+	pageName, _ := v.Pages.GetFrontPage()
 
 	if pageName != ARTISTS_PAGE {
 		panic("This method should only be called from the Playlists page")
-	}
-
-	grid, ok := item.(*tview.Grid)
-	if !ok {
-		panic(fmt.Sprintf("Expected type *tview.Grid but got %T", grid))
 	}
 
 	database, _ := sql.Open("sqlite3", v.DB)
@@ -257,7 +237,7 @@ func ShowArtists(v *models.View, query string) {
 		list.AddItem(artist.Name, artist.Id, 0, func() { SelectArtist(v, a) })
 	}
 	// TODO: show message if 0 results
-	AddQuitOption(list, func() { v.Pages.SwitchToPage(HOME_PAGE) })
+	AddQuitToHomeOption(list, v)
 
 	AddResetOption(list, func() {
 		CreateArtistsPage(v)
@@ -267,10 +247,8 @@ func ShowArtists(v *models.View, query string) {
 
 	list.SetTitle("Artists results")
 
-	// Row 1 = selection list
-	// Row 2 = selected playlist details
-	grid.Clear().AddItem(list, 0, 0, 1, 1, 0, 0, true)
-	v.App.SetFocus(grid)
+	v.Grid.AddItem(list, 1, 0, 1, 1, 0, 0, true)
+	v.App.SetFocus(list)
 
 	if len(artists) == 1 {
 		SelectArtist(v, artists[0])
@@ -288,21 +266,17 @@ func CreateAlbumsPage(v *models.View) {
 }
 
 func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
-	v.UpdateMessageBar(fmt.Sprintf("%s Selected artist %s %s", time.Now().String(), artist.Id, artist.Name))
-	pageName, item := v.Pages.GetFrontPage()
+	v.UpdateMessageBar(fmt.Sprintf("Selected artist %s %s", artist.Id, artist.Name))
+	pageName, _ := v.Pages.GetFrontPage()
 
 	if pageName != ARTISTS_PAGE {
 		panic(fmt.Sprintf("This method should only be called from %s, but was called from %s", ARTISTS_PAGE, pageName))
 	}
 
-	grid, ok := item.(*tview.Grid)
-	if !ok {
-		panic(fmt.Sprintf("Expected type *tview.Grid but got %T", grid))
-	}
 	database, _ := sql.Open("sqlite3", v.DB)
+	// NOTE: this query only returns matches from Album Artists, not Track Artists
 	sqlRows, err := database.Query(
-		// TODO: modify the query to also include albums from the tracks that the artist appears on
-		"select id, name, total_tracks, release_date, album_type from Album a join AlbumArtist AA on a.id = AA.album_id where AA.artist_id = @Id",
+		"select id, name, total_tracks, release_date, album_type from Album a join AlbumArtist AA on a.id = AA.album_id where AA.artist_id = @Id order by release_date",
 		sql.Named("Id", artist.Id))
 
 	if err != nil {
@@ -345,7 +319,7 @@ func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
 		table.SetCell(r+1, 3, tview.NewTableCell(album.AlbumType).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(1))
 	}
 
-	grid.AddItem(table, 1, 0, 1, 1, 0, 0, true)
+	v.Grid.AddItem(table, 1, 0, 1, 1, 0, 0, true)
 	v.App.SetFocus(table)
 }
 

@@ -1,6 +1,11 @@
 package models
 
-import "github.com/rivo/tview"
+import (
+	"fmt"
+	"time"
+
+	"github.com/rivo/tview"
+)
 
 type View struct {
 	// main application
@@ -31,5 +36,5 @@ type SimpleIdentifier struct {
 }
 
 func (v View) UpdateMessageBar(message string) {
-	v.MessageBar.Clear().SetText(message)
+	v.MessageBar.Clear().SetText(fmt.Sprintf("%s => %s", time.Now().Format("03:04:05"), message))
 }

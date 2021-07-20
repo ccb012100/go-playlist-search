@@ -3,6 +3,7 @@ package main
 import (
 	pages "github.com/ccb012100/go-playlist-search/internal"
 	"github.com/ccb012100/go-playlist-search/internal/models"
+
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rivo/tview"
 )

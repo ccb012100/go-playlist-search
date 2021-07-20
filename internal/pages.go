@@ -18,32 +18,93 @@ const (
 	SONGS_PAGE     = "SONGS_PAGE"
 )
 
-func CreatePages(v *models.View) {
-	CreateMenuBar(v)
-	CreateMessageBar(v)
-	CreateHomePage(v)
-	CreatePlaylistsPage(v)
-	CreateArtistsPage(v)
-	CreateAlbumsPage(v)
-	CreateSongsPage(v)
+// Add key bindings for selecting list items.
+func AddListInputListener(l *tview.List) {
+	l.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
+		switch e.Key() {
+		case tcell.KeyRune:
+			switch e.Rune() {
+			case rune('n'):
+				SelectNextListItem(l)
+			case 'p':
+				SelectPreviousListIten(l)
+			case 'j':
+				SelectNextListItem(l)
+			case 'k':
+				SelectPreviousListIten(l)
+			}
+		}
+
+		return e
+	})
+}
+
+// Select Next List Item.
+// Wrap around to the first item if the last is currently selected.
+func SelectNextListItem(l *tview.List) {
+	i := l.GetCurrentItem() + 1
+
+	if i < l.GetItemCount() {
+		l.SetCurrentItem(i)
+	} else {
+		l.SetCurrentItem(0)
+	}
+}
+
+// Select Previous List Item.
+// Wrap around to last item if the first item is currently selected.
+func SelectPreviousListIten(l *tview.List) {
+	l.SetCurrentItem(l.GetCurrentItem() - 1)
+}
+
+// Display the Primitive in the main panel of the app's Grid
+func SetMainPanel(p tview.Primitive, v *models.View) {
+	v.Grid.AddItem(p, 1, 0, 1, 1, 0, 0, true)
+	v.App.SetFocus(p)
+	v.UpdateMessageBar(fmt.Sprintf("p has focus => %t", p.HasFocus()))
 }
 
 func CreateMessageBar(v *models.View) {
-	v.MessageBar.SetTextAlign(tview.AlignCenter).SetText("Message Bar")
+	v.MessageBar = tview.NewTextView().SetTextAlign(tview.AlignCenter).SetText("Message Bar")
+	v.MessageBar.SetBorder(true).SetBorderColor(tcell.ColorDarkGreen)
 }
 
 func CreateMenuBar(v *models.View) {
-	v.MenuBar.SetTextAlign(tview.AlignCenter).SetText("Menu Bar")
+	v.MenuBar = tview.NewTextView().SetTextAlign(tview.AlignCenter).SetText("Menu Bar")
+	v.MenuBar.SetBorder(true).SetBorderColor(tcell.ColorHotPink)
 }
 
 func CreateViewGrid(v *models.View) {
-	v.Grid.SetRows(2, 0, 2).SetColumns(0).SetBorders(true).
-		// row 0: Menu Bar
-		AddItem(v.MenuBar, 0, 0, 1, 1, 0, 0, false).
+	CreateMenuBar(v)
+	CreateMessageBar(v)
+
+	v.List = tview.NewList()
+	v.List.SetBorder(true).SetBorderColor(tcell.ColorDarkRed).SetTitle("List")
+	AddListInputListener(v.List)
+
+	v.Grid = tview.NewGrid().SetRows(2, 0, 2).SetColumns(0).SetBorders(true)
+	v.Grid.SetBorderColor(tcell.ColorMediumPurple)
+
+	// row 0: Menu Bar
+	v.Grid.AddItem(v.MenuBar, 0, 0, 1, 1, 0, 0, false).
 		// row 1: main content
-		AddItem(v.Pages, 1, 0, 1, 1, 0, 0, true).
+		AddItem(v.List, 1, 0, 1, 1, 0, 0, true).
 		// row 2: Message Bar
 		AddItem(v.MessageBar, 2, 0, 1, 1, 0, 0, false)
+}
+
+func GoToMainMenu(v *models.View) {
+	v.List.Clear().
+		AddItem("Playlists", "View Playlists", '1', func() {}).
+		AddItem("Artists", "View Artists", '2', func() {}).
+		AddItem("Albums", "View Albums", '3', func() {}).
+		AddItem("Songs", "View Songs", '4', func() {})
+
+	AddQuitOption(v.List, func() { v.App.Stop() })
+
+	v.List.SetTitle("Main Menu").SetBorderColor(tcell.ColorDarkRed)
+
+	SetMainPanel(v.List, v)
 }
 
 func CreateHomePage(v *models.View) {

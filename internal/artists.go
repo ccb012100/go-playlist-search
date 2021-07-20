@@ -38,12 +38,13 @@ func ShowArtists(v *models.View, query string) {
 		artists = append(artists, models.SimpleIdentifier{Id: id, Name: name})
 	}
 
+	// TODO: show message if 0 results
+
 	list := tview.NewList()
 	for _, artist := range artists {
 		a := artist
 		list.AddItem(artist.Name, artist.Id, 0, func() { SelectArtist(v, a) })
 	}
-	// TODO: show message if 0 results
 	AddQuitToHomeOption(list, v)
 
 	AddResetOption(list, func() {

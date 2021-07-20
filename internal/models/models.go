@@ -20,6 +20,8 @@ type View struct {
 	MenuBar *tview.TextView
 	// db file path
 	DB string
+	// Selection List
+	List *tview.List
 }
 
 type Album struct {

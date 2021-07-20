@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ccb012100/go-playlist-search/config"
 	pages "github.com/ccb012100/go-playlist-search/internal"
 	"github.com/ccb012100/go-playlist-search/internal/models"
 
@@ -10,7 +11,7 @@ import (
 
 // TODO: add key shortcuts to switch focus between grid sections
 func main() {
-	conf := pages.SetConfig()
+	conf := config.SetConfig()
 
 	// create main View
 	view := &models.View{
@@ -22,7 +23,7 @@ func main() {
 		MenuBar:    tview.NewTextView(),
 	}
 
-	pages.CreateRootGrid(view)
+	pages.CreateViewGrid(view)
 	pages.CreatePages(view)
 
 	view.UpdateMessageBar("Application created!")

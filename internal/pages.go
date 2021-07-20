@@ -1,8 +1,6 @@
 package pages
 
 import (
-	"fmt"
-
 	"github.com/ccb012100/go-playlist-search/internal/models"
 
 	"github.com/gdamore/tcell/v2"
@@ -57,36 +55,29 @@ func SelectPreviousListIten(l *tview.List) {
 	l.SetCurrentItem(l.GetCurrentItem() - 1)
 }
 
-// Display the Primitive in the main panel of the app's Grid
-func SetMainPanel(p tview.Primitive, v *models.View) {
-	v.Grid.AddItem(p, 1, 0, 1, 1, 0, 0, true)
-	v.App.SetFocus(p)
-	v.UpdateMessageBar(fmt.Sprintf("p has focus => %t", p.HasFocus()))
-}
-
 func CreateMessageBar(v *models.View) {
 	v.MessageBar = tview.NewTextView().SetTextAlign(tview.AlignCenter).SetText("Message Bar")
 	v.MessageBar.SetBorder(true).SetBorderColor(tcell.ColorDarkGreen)
 }
 
-func CreateMenuBar(v *models.View) {
-	v.MenuBar = tview.NewTextView().SetTextAlign(tview.AlignCenter).SetText("Menu Bar")
-	v.MenuBar.SetBorder(true).SetBorderColor(tcell.ColorHotPink)
+func CreateTitleBar(v *models.View) {
+	v.TitleBar = tview.NewTextView().SetTextAlign(tview.AlignCenter).SetText("Menu Bar")
+	v.TitleBar.SetBorder(true).SetBorderColor(tcell.ColorHotPink)
 }
 
 func CreateViewGrid(v *models.View) {
-	CreateMenuBar(v)
+	CreateTitleBar(v)
 	CreateMessageBar(v)
 
 	v.List = tview.NewList()
 	v.List.SetBorder(true).SetBorderColor(tcell.ColorDarkRed).SetTitle("List")
 	AddListInputListener(v.List)
 
-	v.Grid = tview.NewGrid().SetRows(2, 0, 2).SetColumns(0).SetBorders(true)
+	v.Grid = tview.NewGrid().SetRows(4, 0, 4).SetColumns(0).SetBorders(true)
 	v.Grid.SetBorderColor(tcell.ColorMediumPurple)
 
 	// row 0: Menu Bar
-	v.Grid.AddItem(v.MenuBar, 0, 0, 1, 1, 0, 0, false).
+	v.Grid.AddItem(v.TitleBar, 0, 0, 1, 1, 0, 0, false).
 		// row 1: main content
 		AddItem(v.List, 1, 0, 1, 1, 0, 0, true).
 		// row 2: Message Bar
@@ -95,74 +86,16 @@ func CreateViewGrid(v *models.View) {
 
 func GoToMainMenu(v *models.View) {
 	v.List.Clear().
-		AddItem("Playlists", "View Playlists", '1', func() {}).
-		AddItem("Artists", "View Artists", '2', func() {}).
-		AddItem("Albums", "View Albums", '3', func() {}).
-		AddItem("Songs", "View Songs", '4', func() {})
+		AddItem("Playlists", "View Playlists", '1', func() { SearchForPlaylists(v) }).
+		AddItem("Artists", "View Artists", '2', func() { SearchForArtists(v) }).
+		AddItem("Albums", "View Albums", '3', func() { SearchForAlbums(v) }).
+		AddItem("Songs", "View Songs", '4', func() { SearchForAlbums(v) })
 
 	AddQuitOption(v.List, func() { v.App.Stop() })
 
 	v.List.SetTitle("Main Menu").SetBorderColor(tcell.ColorDarkRed)
 
-	SetMainPanel(v.List, v)
-}
-
-func CreateHomePage(v *models.View) {
-	list := tview.NewList().
-		AddItem("Playlists", "View Playlists", '1', func() { v.Pages.SwitchToPage(PLAYLISTS_PAGE) }).
-		AddItem("Artists", "View Artists", '2', func() { v.Pages.SwitchToPage(ARTISTS_PAGE) }).
-		AddItem("Albums", "View Albums", '3', func() { v.Pages.SwitchToPage(ALBUMS_PAGE) }).
-		AddItem("Songs", "View Songs", '4', func() { v.Pages.SwitchToPage(SONGS_PAGE) })
-
-	AddQuitOption(list, func() { v.App.Stop() })
-
-	list.SetTitle("Home")
-
-	v.Pages.AddPage(HOME_PAGE, list, true, true)
-}
-
-func CreatePlaylistsPage(v *models.View) {
-	input := tview.NewInputField()
-
-	input.SetLabel("Search for a playlist: ").SetFieldWidth(50).SetDoneFunc(func(key tcell.Key) {
-		v.UpdateMessageBar(fmt.Sprintf("key = %v", key))
-		switch key {
-		case tcell.KeyEscape:
-			v.Pages.ShowPage(HOME_PAGE)
-			v.App.SetFocus(v.Pages)
-		case tcell.KeyEnter:
-			ShowPlaylists(v, input.GetText())
-		}
-	})
-
-	v.Pages.AddPage(PLAYLISTS_PAGE, input, true, false)
-}
-
-func CreateArtistsPage(v *models.View) {
-	input := tview.NewInputField()
-
-	input.SetLabel("Search for artists: ").SetFieldWidth(50).SetDoneFunc(func(key tcell.Key) {
-		v.UpdateMessageBar(fmt.Sprintf("key = %v", key))
-		switch key {
-		case tcell.KeyEscape:
-			v.Pages.ShowPage(HOME_PAGE)
-			v.App.SetFocus(v.Pages)
-		case tcell.KeyEnter:
-			ShowArtists(v, input.GetText())
-		}
-	})
-
-	v.Pages.AddPage(ARTISTS_PAGE, input, true, false)
-}
-
-func CreateSongsPage(v *models.View) {
-	box := tview.NewBox().SetBorder(true).SetTitle("Songs")
-	v.Pages.AddPage(SONGS_PAGE, box, true, false)
-}
-
-func CreateAlbumsPage(v *models.View) {
-	box := tview.NewBox().SetBorder(true).SetTitle("Albums")
-	v.Pages.AddPage(SONGS_PAGE, box, true, false)
+	v.SetMainPanel(v.List)
 }
 
 // convert ints into alphabetic characters,
@@ -179,12 +112,22 @@ func AddQuitOption(list *tview.List, f func()) {
 // add a Quit to Home Page option to the passed-in list
 func AddQuitToHomeOption(list *tview.List, v *models.View) {
 	AddQuitOption(list, func() {
-		v.Pages.SwitchToPage(HOME_PAGE)
-		v.App.SetFocus(v.Pages)
+		GoToMainMenu(v)
 	})
 }
 
 // add a Reset Page option to the passed-in list
 func AddResetOption(list *tview.List, f func()) {
 	list.AddItem("[yellow::b]Reset[-]", "[yellow::]Press r to reset this page[-]", 'r', f)
+}
+
+func BackToViewListFunc(v *models.View) func(*tcell.EventKey) *tcell.EventKey {
+	return func(e *tcell.EventKey) *tcell.EventKey {
+		switch e.Key() {
+		case tcell.KeyESC:
+			v.SetMainPanel(v.List)
+		}
+
+		return e
+	}
 }

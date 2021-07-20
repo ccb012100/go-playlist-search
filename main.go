@@ -14,15 +14,14 @@ func main() {
 
 	// create main View
 	view := &models.View{
-		DB:    conf.DBFilePath,
-		App:   tview.NewApplication().EnableMouse(true),
-		Pages: tview.NewPages(),
+		DB:  conf.DBFilePath,
+		App: tview.NewApplication().EnableMouse(true),
 	}
 
 	pages.CreateViewGrid(view)
+	pages.GoToMainMenu(view)
 
 	view.UpdateMessageBar("Application created!")
-	pages.GoToMainMenu(view)
 
 	if err := view.App.SetRoot(view.Grid, true).SetFocus(view.Grid).Run(); err != nil {
 		panic(err)

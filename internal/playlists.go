@@ -5,16 +5,28 @@ import (
 	"fmt"
 
 	"github.com/ccb012100/go-playlist-search/internal/models"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
+func SearchForPlaylists(v *models.View) {
+	input := tview.NewInputField()
+	// TODO: set minimum input length
+	input.SetLabel("Search for a playlist: ").SetFieldWidth(50).SetDoneFunc(func(key tcell.Key) {
+		v.UpdateMessageBar(fmt.Sprintf("key = %v", key))
+		switch key {
+		case tcell.KeyEscape:
+			GoToMainMenu(v)
+		case tcell.KeyEnter:
+			ShowPlaylists(v, input.GetText())
+		}
+	})
+
+	v.SetMainPanel(input)
+}
+
 func ShowPlaylists(v *models.View, query string) {
 	v.UpdateMessageBar(fmt.Sprintf("func ShowPlaylists() query='%s'", query))
-	pageName, _ := v.Pages.GetFrontPage()
-
-	if pageName != PLAYLISTS_PAGE {
-		panic(fmt.Sprintf("This method should only be called from %s, but was called from %s", PLAYLISTS_PAGE, pageName))
-	}
 
 	database, _ := sql.Open("sqlite3", v.DB)
 	rows, err := database.Query(
@@ -38,38 +50,33 @@ func ShowPlaylists(v *models.View, query string) {
 		playlists = append(playlists, models.SimpleIdentifier{Id: id, Name: name})
 	}
 
-	list := tview.NewList()
+	v.List.Clear().SetTitle("Playlists")
+
+	// TODO: display message if there are no matches
+
 	for _, plist := range playlists {
-		list.AddItem(plist.Name, plist.Id, 0, func() { SelectPlaylist(v, plist) })
+		p := plist
+		v.List.AddItem(p.Name, p.Id, 0, func() { SelectPlaylist(v, p) })
 	}
 
-	AddQuitToHomeOption(list, v)
+	AddQuitToHomeOption(v.List, v)
+	AddResetOption(v.List, func() { SearchForPlaylists(v) })
 
-	AddResetOption(list, func() {
-		CreatePlaylistsPage(v)
-		v.Pages.ShowPage(PLAYLISTS_PAGE)
-		v.App.SetFocus(v.Pages)
-	})
+	v.SetMainPanel(v.List)
 
-	list.SetTitle("Playlists")
-
-	// Row 1 = selection list
-	// Row 2 = selected playlist details
-	v.Grid.AddItem(list, 1, 0, 1, 1, 0, 0, true)
-	v.App.SetFocus(list)
+	if len(playlists) == 1 {
+		SelectPlaylist(v, playlists[0])
+	}
 }
 
 func SelectPlaylist(v *models.View, playlist models.SimpleIdentifier) {
-	pageName, _ := v.Pages.GetFrontPage()
-
-	if pageName != PLAYLISTS_PAGE {
-		panic("This method should only be called from the Playlists page")
-	}
-
+	v.UpdateTitleBar(playlist.Name)
 	var textView = tview.NewTextView()
 
 	textView.SetText(fmt.Sprintf("Selected playlist id='%s', name='%s'", playlist.Id, playlist.Name)).
 		SetTitle(fmt.Sprintf("Selected Playlist: %s", playlist.Name))
 
-	v.Grid.AddItem(textView, 1, 0, 1, 1, 0, 0, false)
+	textView.SetInputCapture(BackToViewListFunc(v))
+
+	v.SetMainPanel(textView)
 }

@@ -10,13 +10,25 @@ import (
 	"github.com/rivo/tview"
 )
 
+func SearchForArtists(v *models.View) {
+	input := tview.NewInputField()
+	// TODO: set minimum input length
+	input.SetLabel("Search for artists: ").SetFieldWidth(50).SetDoneFunc(func(key tcell.Key) {
+		v.UpdateMessageBar(fmt.Sprintf("key = %v", key))
+		switch key {
+		case tcell.KeyEscape:
+			GoToMainMenu(v)
+		case tcell.KeyEnter:
+			ShowArtists(v, input.GetText())
+		}
+	})
+
+	v.SetMainPanel(input)
+}
+
 func ShowArtists(v *models.View, query string) {
 	v.UpdateMessageBar(fmt.Sprintf("func ShowArtists() query='%s'", query))
-	pageName, _ := v.Pages.GetFrontPage()
-
-	if pageName != ARTISTS_PAGE {
-		panic("This method should only be called from the Playlists page")
-	}
+	v.UpdateTitleBar(fmt.Sprintf("Artists matching '%s'", query))
 
 	database, _ := sql.Open("sqlite3", v.DB)
 
@@ -39,37 +51,30 @@ func ShowArtists(v *models.View, query string) {
 	}
 
 	// TODO: show message if 0 results
-
-	list := tview.NewList()
-	for _, artist := range artists {
-		a := artist
-		list.AddItem(artist.Name, artist.Id, 0, func() { SelectArtist(v, a) })
-	}
-	AddQuitToHomeOption(list, v)
-
-	AddResetOption(list, func() {
-		CreateArtistsPage(v)
-		v.Pages.ShowPage(ARTISTS_PAGE)
-		v.App.SetFocus(v.Pages)
-	})
-
-	list.SetTitle("Artists results")
-
-	v.Grid.AddItem(list, 1, 0, 1, 1, 0, 0, true)
-	v.App.SetFocus(list)
-
 	if len(artists) == 1 {
 		SelectArtist(v, artists[0])
+		return
 	}
+
+	v.List.Clear()
+	for _, artist := range artists {
+		a := artist
+		v.List.AddItem(artist.Name, artist.Id, 0, func() { SelectArtist(v, a) })
+	}
+	AddQuitToHomeOption(v.List, v)
+
+	AddResetOption(v.List, func() {
+		SearchForArtists(v)
+	})
+
+	v.List.SetTitle("Artists results")
+
+	v.SetMainPanel(v.List)
 }
 
 func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
+	v.UpdateTitleBar(artist.Name)
 	v.UpdateMessageBar(fmt.Sprintf("Selected artist %s %s", artist.Id, artist.Name))
-	pageName, _ := v.Pages.GetFrontPage()
-
-	if pageName != ARTISTS_PAGE {
-		panic(fmt.Sprintf("This method should only be called from %s, but was called from %s", ARTISTS_PAGE, pageName))
-	}
 
 	database, _ := sql.Open("sqlite3", v.DB)
 	// NOTE: this query only returns matches from Album Artists, not Track Artists
@@ -106,10 +111,16 @@ func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
 		textView.SetTitle("No matches").SetBorder(true).SetBorderColor(tcell.ColorDarkRed)
 		textView.SetText(fmt.Sprintf("There are no Albums for artist [green:-:b]%s[-] [gray:-:-](Id = %s)[-]", artist.Name, artist.Id))
 
-		v.Grid.AddItem(textView, 1, 0, 1, 1, 0, 0, true)
-		v.App.SetFocus(textView)
+		textView.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
+			switch e.Key() {
+			case tcell.KeyESC:
+				v.SetMainPanel(v.List)
+			}
 
-		// TODO: add key binding to go back to select ("press any key to go back")
+			return e
+		})
+
+		v.SetMainPanel(textView)
 		return
 	}
 
@@ -120,6 +131,7 @@ func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
 	table.SetCell(0, 2, tview.NewTableCell("Release Date").SetTextColor(tcell.ColorOrange).SetAlign(tview.AlignCenter).SetExpansion(2))
 	table.SetCell(0, 3, tview.NewTableCell("Type").SetTextColor(tcell.ColorOrange).SetAlign(tview.AlignCenter).SetExpansion(1))
 
+	// TODO: add left/right padding to table cells
 	// set table contents
 	for r := 0; r < len(albums); r++ {
 		album := &albums[r]
@@ -130,6 +142,7 @@ func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
 		table.SetCell(r+1, 3, tview.NewTableCell(album.AlbumType).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(1))
 	}
 
-	v.Grid.AddItem(table, 1, 0, 1, 1, 0, 0, true)
-	v.App.SetFocus(table)
+	table.SetInputCapture(BackToViewListFunc(v))
+
+	v.SetMainPanel(table)
 }

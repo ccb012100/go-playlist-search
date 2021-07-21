@@ -78,11 +78,11 @@ func CreateViewGrid(v *models.View) {
 
 func GoToMainMenu(v *models.View) {
 	v.List.Clear().
-		AddItem("Playlists", "Search Playlists", '1', func() { SearchForPlaylists(v) }).
-		AddItem("Artists", "Search Artists", '2', func() { SearchForArtists(v) }).
-		AddItem("Albums", "Search Albums", '3', func() { SearchForAlbums(v) }).
-		AddItem("Songs", "Search Songs", '4', func() { SearchForAlbums(v) }).
-		AddItem("Starred", "Search Starred Playlists", '5', func() { SearchStarredPlaylists(v) })
+		AddItem("Playlists", "Search Playlists", 'a', func() { SearchForPlaylists(v) }).
+		AddItem("Artists", "Search Artists", 's', func() { SearchForArtists(v) }).
+		AddItem("Albums", "Search Albums", 'd', func() { SearchForAlbums(v) }).
+		AddItem("Songs", "Search Songs", 'f', func() { SearchForAlbums(v) }).
+		AddItem("Starred", "Search Starred Playlists", 'j', func() { SearchStarredPlaylists(v) })
 
 	AddQuitOption(v.List, func() { v.App.Stop() })
 

@@ -8,14 +8,6 @@ import (
 	"github.com/rivo/tview"
 )
 
-const (
-	ALBUMS_PAGE    = "ALBUMS_PAGE"
-	ARTISTS_PAGE   = "ARTISTS_PAGE"
-	HOME_PAGE      = "HOME_PAGE"
-	PLAYLISTS_PAGE = "PLAYLISTS_PAGE"
-	SONGS_PAGE     = "SONGS_PAGE"
-)
-
 // Add key bindings for selecting list items.
 func AddListInputListener(l *tview.List) {
 	l.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {

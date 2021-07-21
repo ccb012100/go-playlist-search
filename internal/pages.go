@@ -126,6 +126,8 @@ func BackToViewListFunc(v *models.View) func(*tcell.EventKey) *tcell.EventKey {
 		switch e.Key() {
 		case tcell.KeyESC:
 			v.SetMainPanel(v.List)
+		case tcell.KeyRune:
+			v.SetMainPanel(v.List)
 		}
 
 		return e

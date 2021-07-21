@@ -3,6 +3,7 @@ package pages
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/ccb012100/go-playlist-search/internal/models"
@@ -76,10 +77,25 @@ func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
 	v.UpdateTitleBar(artist.Name)
 	v.UpdateMessageBar(fmt.Sprintf("Selected artist %s %s", artist.Id, artist.Name))
 
+	v.List.Clear().
+		AddItem("Albums", "View Artist's Albums", '1', func() { ShowArtistAlbums(v, artist) }).
+		AddItem("Tracks", "View Artist's Tracks", '2', func() { v.UpdateMessageBar("Not implemented yet") }).
+		AddItem("Playlists", "List Playlists containing the Artist", '3', func() { showPlaylists(v, artist) })
+
+	AddQuitOption(v.List, func() { GoToMainMenu(v) })
+
+	v.List.SetTitle("Artist Info").SetBorderColor(tcell.ColorDarkSeaGreen)
+
+	v.SetMainPanel(v.List)
+}
+
+func ShowArtistAlbums(v *models.View, artist models.SimpleIdentifier) {
+	v.UpdateTitleBar(fmt.Sprintf("Albums by %s", artist.Name))
 	database, _ := sql.Open("sqlite3", v.DB)
-	// NOTE: this query only returns matches from Album Artists, not Track Artists
-	sqlRows, err := database.Query(
-		"select id, name, total_tracks, release_date, album_type from Album a join AlbumArtist AA on a.id = AA.album_id where AA.artist_id = @Id order by release_date",
+
+	// Get albums by the artist
+	albumArtistRows, err := database.Query(
+		"select id, name, total_tracks, release_date, album_type from Album a join AlbumArtist AA on a.id = AA.album_id where AA.artist_id = @Id",
 		sql.Named("Id", artist.Id))
 
 	if err != nil {
@@ -88,11 +104,37 @@ func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
 
 	var albums []models.Album
 
-	for sqlRows.Next() {
+	for albumArtistRows.Next() {
 		var id, name, releaseDate, albumType string
 		var totalTracks int
 
-		if err := sqlRows.Scan(&id, &name, &totalTracks, &releaseDate, &albumType); err != nil {
+		if err := albumArtistRows.Scan(&id, &name, &totalTracks, &releaseDate, &albumType); err != nil {
+			panic(err)
+		}
+
+		albums = append(albums, models.Album{
+			Id:          id,
+			Name:        name,
+			TotalTracks: totalTracks,
+			ReleaseDate: releaseDate,
+			AlbumType:   albumType,
+		})
+	}
+
+	// Get albums with Tracks the Artist appears on
+	trackArtistRows, err := database.Query(
+		"select A.id, A.name, total_tracks, release_date, album_type from Album A join Track T on A.id = T.album_id join TrackArtist TA on T.id = TA.track_id where TA.artist_id = @Id",
+		sql.Named("Id", artist.Id))
+
+	if err != nil {
+		panic(err)
+	}
+
+	for trackArtistRows.Next() {
+		var id, name, releaseDate, albumType string
+		var totalTracks int
+
+		if err := trackArtistRows.Scan(&id, &name, &totalTracks, &releaseDate, &albumType); err != nil {
 			panic(err)
 		}
 
@@ -124,6 +166,12 @@ func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
 		return
 	}
 
+	// sort albums
+	sort.Sort(models.ByReleaseDate(albums))
+
+	// track albums in a map so that we display a unique set
+	var set = make(map[string]models.Album)
+
 	table := tview.NewTable().SetBorders(true)
 	// set header row
 	table.SetCell(0, 0, tview.NewTableCell("Name").SetTextColor(tcell.ColorOrange).SetAlign(tview.AlignCenter).SetExpansion(2))
@@ -133,16 +181,73 @@ func SelectArtist(v *models.View, artist models.SimpleIdentifier) {
 
 	// TODO: add left/right padding to table cells
 	// set table contents
-	for r := 0; r < len(albums); r++ {
-		album := &albums[r]
-		// use r+1 to offset for header row
-		table.SetCell(r+1, 0, tview.NewTableCell(album.Name).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(2))
-		table.SetCell(r+1, 1, tview.NewTableCell(strconv.Itoa(album.TotalTracks)).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignRight).SetExpansion(1))
-		table.SetCell(r+1, 2, tview.NewTableCell(album.ReleaseDate).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(2))
-		table.SetCell(r+1, 3, tview.NewTableCell(album.AlbumType).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(1))
+	// start row at 1 to offset for header
+	for row, i := 1, 0; i < len(albums); i++ {
+		album := albums[i]
+
+		// skip if the album has already been added in
+		if _, ok := set[album.Id]; ok {
+			continue
+		}
+
+		set[album.Id] = album
+
+		table.SetCell(row, 0, tview.NewTableCell(album.Name).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(2))
+		table.SetCell(row, 1, tview.NewTableCell(strconv.Itoa(album.TotalTracks)).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignRight).SetExpansion(1))
+		table.SetCell(row, 2, tview.NewTableCell(album.ReleaseDate).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(2))
+		table.SetCell(row, 3, tview.NewTableCell(album.AlbumType).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(1))
+
+		row++
 	}
 
 	table.SetInputCapture(BackToViewListFunc(v))
 
 	v.SetMainPanel(table)
+}
+
+// Display Playlists containing the specified Artist
+func showPlaylists(v *models.View, artist models.SimpleIdentifier) {
+	v.UpdateTitleBar("Playlists containing tracks by " + artist.Name)
+	database, _ := sql.Open("sqlite3", v.DB)
+	sqlRows, err := database.Query(
+		"select PL.name, PL.id from Playlist PL join PlaylistTrack PT on PL.id = PT.playlist_id join Track T on PT.track_id = T.id join TrackArtist TA on T.id = TA.track_id where TA.artist_id = @Id group by PL.id, PL.name order by Pl.name",
+		sql.Named("Id", artist.Id))
+
+	if err != nil {
+		panic(err)
+	}
+
+	var playlists []models.SimpleIdentifier
+
+	for sqlRows.Next() {
+		var id, name string
+
+		if err := sqlRows.Scan(&id, &name); err != nil {
+			panic(err)
+		}
+
+		playlists = append(playlists, models.SimpleIdentifier{
+			Id:   id,
+			Name: name,
+		})
+	}
+
+	textView := tview.NewTextView().SetDynamicColors(true)
+
+	// this should never happen
+	if len(playlists) == 0 {
+		panic(fmt.Sprintf("No playlists were found for artist '%s', '%s'", artist.Name, artist.Id))
+	}
+
+	txt := fmt.Sprintf("Playlists containing %s:", artist.Name+"\n")
+
+	for i, p := range playlists {
+		txt += fmt.Sprintf("\n%d.\t%s\t%s", i, p.Id, p.Name)
+	}
+
+	textView.SetText(txt)
+
+	textView.SetInputCapture(BackToViewListFunc(v))
+
+	v.SetMainPanel(textView)
 }

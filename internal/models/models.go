@@ -48,3 +48,10 @@ func (v View) SetMainPanel(p tview.Primitive) {
 	v.Grid.AddItem(p, 1, 0, 1, 1, 0, 0, true)
 	v.App.SetFocus(p)
 }
+
+// ByAge implements sort.Interface based on the ReleaseDate field.
+type ByReleaseDate []Album
+
+func (a ByReleaseDate) Len() int           { return len(a) }
+func (a ByReleaseDate) Less(i, j int) bool { return a[i].ReleaseDate < a[j].ReleaseDate }
+func (a ByReleaseDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }

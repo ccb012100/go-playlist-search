@@ -49,7 +49,7 @@ func (v View) SetMainPanel(p tview.Primitive) {
 	v.App.SetFocus(p)
 }
 
-// ByAge implements sort.Interface based on the ReleaseDate field.
+// ByReleaseDate implements sort.Interface based on the ReleaseDate field.
 type ByReleaseDate []Album
 
 func (a ByReleaseDate) Len() int           { return len(a) }

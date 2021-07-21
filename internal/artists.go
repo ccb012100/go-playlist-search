@@ -179,7 +179,6 @@ func ShowArtistAlbums(v *models.View, artist models.SimpleIdentifier) {
 	table.SetCell(0, 2, tview.NewTableCell("Release Date").SetTextColor(tcell.ColorOrange).SetAlign(tview.AlignCenter).SetExpansion(2))
 	table.SetCell(0, 3, tview.NewTableCell("Type").SetTextColor(tcell.ColorOrange).SetAlign(tview.AlignCenter).SetExpansion(1))
 
-	// TODO: add left/right padding to table cells
 	// set table contents
 	// start row at 1 to offset for header
 	for row, i := 1, 0; i < len(albums); i++ {
@@ -192,10 +191,10 @@ func ShowArtistAlbums(v *models.View, artist models.SimpleIdentifier) {
 
 		set[album.Id] = album
 
-		table.SetCell(row, 0, tview.NewTableCell(album.Name).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(2))
-		table.SetCell(row, 1, tview.NewTableCell(strconv.Itoa(album.TotalTracks)).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignRight).SetExpansion(1))
-		table.SetCell(row, 2, tview.NewTableCell(album.ReleaseDate).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(2))
-		table.SetCell(row, 3, tview.NewTableCell(album.AlbumType).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(1))
+		table.SetCell(row, 0, tview.NewTableCell(padLeft(album.Name)).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(2))
+		table.SetCell(row, 1, tview.NewTableCell(padRight(strconv.Itoa(album.TotalTracks))).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignRight).SetExpansion(1))
+		table.SetCell(row, 2, tview.NewTableCell(padLeft(album.ReleaseDate)).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(2))
+		table.SetCell(row, 3, tview.NewTableCell(padLeft(album.AlbumType)).SetTextColor(tcell.ColorGreen).SetAlign(tview.AlignLeft).SetExpansion(1))
 
 		row++
 	}
@@ -239,7 +238,7 @@ func showPlaylists(v *models.View, artist models.SimpleIdentifier) {
 		panic(fmt.Sprintf("No playlists were found for artist '%s', '%s'", artist.Name, artist.Id))
 	}
 
-	txt := fmt.Sprintf("Playlists containing %s:", artist.Name+"\n")
+	txt := fmt.Sprintf("Playlists containing %s:\n", artist.Name)
 
 	for i, p := range playlists {
 		txt += fmt.Sprintf("\n%d.\t%s\t%s", i, p.Id, p.Name)

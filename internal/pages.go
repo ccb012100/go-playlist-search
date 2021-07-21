@@ -86,10 +86,11 @@ func CreateViewGrid(v *models.View) {
 
 func GoToMainMenu(v *models.View) {
 	v.List.Clear().
-		AddItem("Playlists", "View Playlists", '1', func() { SearchForPlaylists(v) }).
-		AddItem("Artists", "View Artists", '2', func() { SearchForArtists(v) }).
-		AddItem("Albums", "View Albums", '3', func() { SearchForAlbums(v) }).
-		AddItem("Songs", "View Songs", '4', func() { SearchForAlbums(v) })
+		AddItem("Playlists", "Search Playlists", '1', func() { SearchForPlaylists(v) }).
+		AddItem("Artists", "Search Artists", '2', func() { SearchForArtists(v) }).
+		AddItem("Albums", "Search Albums", '3', func() { SearchForAlbums(v) }).
+		AddItem("Songs", "Search Songs", '4', func() { SearchForAlbums(v) }).
+		AddItem("Starred", "Search Starred Playlists", '5', func() { SearchStarredPlaylists(v) })
 
 	AddQuitOption(v.List, func() { v.App.Stop() })
 
@@ -132,4 +133,12 @@ func BackToViewListFunc(v *models.View) func(*tcell.EventKey) *tcell.EventKey {
 
 		return e
 	}
+}
+
+func padLeft(s string) string {
+	return "  " + s
+}
+
+func padRight(s string) string {
+	return s + "  "
 }

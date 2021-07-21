@@ -35,6 +35,13 @@ type SimpleIdentifier struct {
 	Id   string
 }
 
+type StarredPlaylistMatch struct {
+	PlaylistName string
+	TrackName    string
+	AlbumName    string
+	Artists      string
+}
+
 func (v View) UpdateMessageBar(message string) {
 	v.MessageBar.SetText(fmt.Sprintf("%s => %s", time.Now().Format("03:04:05"), message))
 }

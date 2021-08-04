@@ -1,29 +1,28 @@
 package main
 
 import (
-	"github.com/ccb012100/go-playlist-search/config"
-	pages "github.com/ccb012100/go-playlist-search/internal"
-	"github.com/ccb012100/go-playlist-search/internal/models"
-
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/rivo/tview"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/widget"
 )
 
+var data = []string{"a", "string", "list"}
+
 func main() {
-	conf := config.SetConfig()
+	myApp := app.New()
+	myWindow := myApp.NewWindow("List Widget")
 
-	// create main View
-	view := &models.View{
-		DB:  conf.DBFilePath,
-		App: tview.NewApplication().EnableMouse(true),
-	}
+	list := widget.NewList(
+		func() int {
+			return len(data)
+		},
+		func() fyne.CanvasObject {
+			return widget.NewLabel("template")
+		},
+		func(i widget.ListItemID, o fyne.CanvasObject) {
+			o.(*widget.Label).SetText(data[i])
+		})
 
-	pages.CreateViewGrid(view)
-	pages.GoToMainMenu(view)
-
-	view.UpdateMessageBar("Application created!")
-
-	if err := view.App.SetRoot(view.Grid, true).SetFocus(view.Grid).Run(); err != nil {
-		panic(err)
-	}
+	myWindow.SetContent(list)
+	myWindow.ShowAndRun()
 }

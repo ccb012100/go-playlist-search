@@ -4,8 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	"fyne.io/fyne/v2"
 	"github.com/rivo/tview"
 )
+
+type Application struct {
+	App    fyne.App
+	Window fyne.Window
+}
 
 type View struct {
 	// main application

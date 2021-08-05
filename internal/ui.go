@@ -82,7 +82,8 @@ func GoToMainMenu(v *models.View) {
 		AddItem("Artists", "Search Artists", 's', func() { SearchForArtists(v) }).
 		AddItem("Albums", "Search Albums", 'd', func() { SearchForAlbums(v) }).
 		AddItem("Songs", "Search Songs", 'f', func() { SearchForSongs(v) }).
-		AddItem("Starred", "Search Starred Playlists", 'j', func() { SearchStarredPlaylists(v) })
+		AddItem("Starred", "Search Starred Playlists", 'j', func() { SearchStarredPlaylists(v) }).
+		AddItem("Duplicate Songs", "Show Duplicate Songs in Starred Playlists", 'k', func() { ShowDuplicateSongsinStarredPlaylists(v) })
 
 	AddQuitOption(v.List, func() { v.App.Stop() })
 

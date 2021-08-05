@@ -1,4 +1,4 @@
-package pages
+package internal
 
 import (
 	"github.com/ccb012100/go-playlist-search/internal/models"
@@ -81,7 +81,7 @@ func GoToMainMenu(v *models.View) {
 		AddItem("Playlists", "Search Playlists", 'a', func() { SearchForPlaylists(v) }).
 		AddItem("Artists", "Search Artists", 's', func() { SearchForArtists(v) }).
 		AddItem("Albums", "Search Albums", 'd', func() { SearchForAlbums(v) }).
-		AddItem("Songs", "Search Songs", 'f', func() { SearchForAlbums(v) }).
+		AddItem("Songs", "Search Songs", 'f', func() { SearchForSongs(v) }).
 		AddItem("Starred", "Search Starred Playlists", 'j', func() { SearchStarredPlaylists(v) })
 
 	AddQuitOption(v.List, func() { v.App.Stop() })

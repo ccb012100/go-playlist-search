@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/ccb012100/go-playlist-search/config"
-	pages "github.com/ccb012100/go-playlist-search/internal"
+	"github.com/ccb012100/go-playlist-search/internal"
 	"github.com/ccb012100/go-playlist-search/internal/models"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -18,8 +18,8 @@ func main() {
 		App: tview.NewApplication().EnableMouse(true),
 	}
 
-	pages.CreateViewGrid(view)
-	pages.GoToMainMenu(view)
+	internal.CreateViewGrid(view)
+	internal.GoToMainMenu(view)
 
 	view.UpdateMessageBar("Application created!")
 

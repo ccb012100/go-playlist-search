@@ -1,4 +1,4 @@
-package pages
+package internal
 
 import (
 	"github.com/ccb012100/go-playlist-search/internal/models"

@@ -94,7 +94,7 @@ func GetAlbumsByArtist(artist *models.SimpleIdentifier, db string) []models.Albu
 	}
 
 	// sort albums
-	sort.Sort(models.ByReleaseDate(albums))
+	sort.Sort(models.ByName(albums))
 
 	return albums
 }
@@ -178,7 +178,7 @@ func SearchStarredPlaylists(query string, db string) []models.StarredPlaylistMat
 		ORDER BY P.name, A.id, PT.added_at, T.track_number
 	*/
 	sqlRows, err := database.Query(
-		"SELECT P.name AS playlistName, T.name AS trackName, A.name AS albumName, GROUP_CONCAT(A2.name, '; ') AS artists FROM Playlist P JOIN PlaylistTrack PT ON P.id = PT.playlist_id JOIN Track T ON PT.track_id = T.id JOIN Album A ON T.album_id = A.id JOIN TrackArtist TA ON T.id = TA.track_id JOIN Artist A2 ON TA.artist_id = A2.id WHERE P.name LIKE 'Starred%' AND (A2.name LIKE '%' || @Query || '%' OR T.name LIKE '%' || @Query || '%' OR A.name LIKE '%' || @Query || '%') GROUP BY P.name, T.id, A.id, PT.added_at, T.track_number ORDER BY P.name, A.id, PT.added_at, T.track_number",
+		"SELECT P.name AS playlistName, T.name AS trackName, A.name AS albumName, GROUP_CONCAT(A2.name, '; ') AS artists FROM Playlist P JOIN PlaylistTrack PT ON P.id = PT.playlist_id JOIN Track T ON PT.track_id = T.id JOIN Album A ON T.album_id = A.id JOIN TrackArtist TA ON T.id = TA.track_id JOIN Artist A2 ON TA.artist_id = A2.id WHERE P.name LIKE 'Starred%' AND (A2.name LIKE '%' || @Query || '%' OR T.name LIKE '%' || @Query || '%' OR A.name LIKE '%' || @Query || '%') GROUP BY P.name, T.id, A.id, PT.added_at, T.track_number ORDER BY P.name, A.name, PT.added_at, T.track_number",
 		sql.Named("Query", query))
 
 	if err != nil {
